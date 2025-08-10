@@ -151,7 +151,9 @@ replay_pid*
 /.idea/
 additional-spring-configuration-metadata.json
 
-### log ###
-root.log
-root.log.*
+log/
+logs/
+*.log.*
+*.gz
+
 .env

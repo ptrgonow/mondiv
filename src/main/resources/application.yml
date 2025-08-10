@@ -1,5 +1,5 @@
 # =========================
-# Mondiv - application.yml (RDS 직결 / Free Tier 최적화)
+# Mondiv - application.yml (데모 최적화 버전)
 # =========================
 spring:
   application:
@@ -12,28 +12,50 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL}             # RDS 엔드포인트
-    username: ${DB_USER}
-    password: ${DB_PASS}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/mondiv?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USER:mondiv}
+    password: ${DB_PASS:mondiv_pw}
     hikari:
       pool-name: mondiv-hikari
-      maximum-pool-size: 8            # Free-tier/RDS 소형 인스턴스 가정(필요 시 조정)
-      minimum-idle: 2
+      maximum-pool-size: 10           # 동적 SQL 함수 고려하여 증가
+      minimum-idle: 3
       connection-timeout: 30000       # 30s
       validation-timeout: 5000
-      idle-timeout: 240000            # 4m (RDS wait_timeout 600s 이하)
-      max-lifetime: 300000            # 5m (wait_timeout 이하)
+      idle-timeout: 240000            # 4m
+      max-lifetime: 300000            # 5m
       keepalive-time: 60000           # 60s
       connection-test-query: "SELECT 1"
+      # JSON 함수 지원을 위한 추가 설정
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        useLocalSessionState: true
+        rewriteBatchedStatements: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        elideSetAutoCommits: true
+        maintainTimeStats: false
 
   jpa:
     open-in-view: false
     show-sql: false
     hibernate:
       ddl-auto: update              # 스키마는 수동 반영, 앱은 검증만
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
       hibernate.jdbc.time_zone: UTC
+      hibernate.connection.provider_disables_autocommit: true
+      hibernate.cache.use_second_level_cache: false
+      hibernate.cache.use_query_cache: false
+      hibernate.generate_statistics: false
+      hibernate.jdbc.batch_size: 25
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+      hibernate.jdbc.batch_versioned_data: true
 
   flyway:
     enabled: false                    # 미사용
@@ -45,61 +67,291 @@ spring:
   task:
     scheduling:
       pool:
-        size: 2
+        size: 4                       # 스케줄러 증가 (데이터 수집 + 배당 분석)
       thread-name-prefix: mondiv-scheduler-
 
 server:
-  port: 9900
+  port: ${SERVER_PORT:9900}
   forward-headers-strategy: native
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/json,application/javascript,text/javascript
     min-response-size: 1024
+  servlet:
+    context-path: /
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,scheduledtasks
   endpoint:
     health:
       probes:
         enabled: true
+      show-details: when-authorized
   simple:
     metrics:
       export:
         enabled: true
 
+# =========================
+# 로깅 설정 (프로젝트 루트/log/mondiv 적재)
+# =========================
 logging:
   level:
     root: INFO
     com.mondiv: INFO
     org.hibernate.SQL: OFF
     org.hibernate.orm.jdbc.bind: OFF
+    org.springframework.scheduling: INFO
+    org.springframework.web: INFO
+    com.mondiv.client.TwelveDataClient: DEBUG         # API 호출 로그
+    com.mondiv.service.DataCollectionService: DEBUG  # 데이터 수집 로그
+    com.mondiv.service.TwelveDataRateLimiter: INFO    # 레이트 리미터 로그
+    
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    
+  file:
+    name: "./log/mondiv/mondiv.log"
+    
+  logback:
+    rollingpolicy:
+      # 일별 로테이션
+      file-name-pattern: "./log/mondiv/mondiv-%d{yyyy-MM-dd}.%i.log.gz"
+      max-file-size: 100MB
+      max-history: 30        # 30일 보관
+      total-size-cap: 3GB    # 전체 로그 최대 3GB
+      clean-history-on-start: false
 
 # =========================
-# Mondiv 도메인 설정 (Free Tier 한도 반영)
+# Mondiv 도메인 설정 (데모 최적화)
 # =========================
 mondiv:
   display-time-zone: Asia/Seoul        # 화면 표시는 KST
+  
+  # 세금 설정
   tax:
-    us-withholding: 0.15               # 미국 원천징수 기본 가정
+    us-withholding: 0.15               # 미국 원천징수 15%
+    
+  # Twelve Data API 설정
   twelvedata:
-    base-url: https://api.twelvedata.com
     api-key: ${TD_API_KEY}
+    base-url: ${TD_BASE_URL:https://api.twelvedata.com}
     rate-limit:
-      rest:
-        per-minute-credits: 8          # Basic 플랜
-        per-day-credits: 800
-      ws:
-        trial-credits: 8               # Trial 구독 한도(필요 시만 사용)
-    streaming:
-      ws-enabled: false                # 프리티어 기본은 REST 위주(WS 필요 시 true)
+      credits-per-minute: 8            # Basic 플랜
+      credits-per-day: 800
+      fallback-interval-minutes: 4     # 0.25 rpm fallback
+
+  # 데모용 고정 티커 설정 (YieldMax 중심 + JPM)
+  demo:
+    # 메인 4티커 (주력 수집 - 2분마다)
+    main-tickers:
+      - "CONY"    # YieldMax COIN 커버드콜 (높은 월배당 ~20%+)
+      - "ULTY"    # YieldMax Ultra 커버드콜 (초고배당 ~30%+)  
+      - "MSTY"    # YieldMax MSTR 커버드콜 (높은 월배당 ~25%+)
+      - "JEPI"    # JPMorgan 월배당 (안정성, ~8-10%)
+    
+    # 확장 티커 (보조 수집 - EOD만 또는 저주파)
+    extended-tickers:
+      - "JEPQ"    # JPMorgan NASDAQ 버전
+      - "TSLY"    # YieldMax TSLA 커버드콜
+      - "NVDY"    # YieldMax NVDA 커버드콜
+      - "APLY"    # YieldMax AAPL 커버드콜
+      - "SCHD"    # Schwab 고배당 (전통적)
+      - "VYM"     # Vanguard 고배당 (안정적)
+      - "HDV"     # iShares 고배당
+      - "VNQ"     # Vanguard REIT
+    
+    # 지수 (벤치마킹용 - EOD만)
+    index-tickers:
+      - "^GSPC"   # S&P 500
+      - "^IXIC"   # NASDAQ Composite  
+      - "^KS11"   # KOSPI
+
+    # 추천 시스템 기본값
+    recommendation:
+      max-etfs-compare: 8              # 한 번에 비교할 최대 ETF 수
+      min-yield-threshold: 8.0         # 최소 연 배당수익률 8% (커버드콜 중심)
+      preferred-frequency: "monthly"    # 선호 배당 주기 (월배당)
+      
+  # 스케줄러 설정 (KST 기준)
   scheduler:
-    # 정규장(UTC) – KST 22:30~05:00 ≈ UTC 13:30~20:00
-    market-open-utc: "13:30"
-    market-close-utc: "20:00"
-    quotes-poll-interval: "PT2M"       # 2분 간격(0.5 rpm) → 4심볼 배치 기준 일일 ~780 credits
-    eod-load-cron: "0 10 6 * * *"      # 06:10 KST (EOD 적재)
-    dividends-load-cron: "0 10 2 * * *"# 02:10 KST (배당 이벤트 적재)
-    fx-load-cron: "0 0 9 * * *"        # 09:00 KST (USD/KRW)
+    # 미국 정규장 시간 (KST 22:30~05:00)
+    market:
+      open-kst: "22:30"
+      close-kst: "05:00"
+      timezone: "Asia/Seoul"
+    
+    # 수집 주기
+    collection:
+      # 메인 4티커 실시간 수집 (장중 2분마다)
+      main-quotes:
+        cron: "0 */2 22-23 * * MON-FRI"  # 22-23시 (KST)
+        cron-overnight: "0 */2 0-5 * * TUE-SAT"  # 0-5시 (다음날)
+        enabled: true
+        
+      # 확장 티커 (EOD만 수집)
+      extended-quotes:
+        enabled: false  # 실시간 수집 비활성화, EOD만 활용
+        
+      # 지수 수집 (EOD만)
+      index-quotes:
+        enabled: false  # 실시간 수집 비활성화, EOD만 활용
+        
+      # EOD 수집 (매일 06:10 KST - 모든 티커)
+      eod:
+        cron: "0 10 6 * * *"
+        enabled: true
+        
+      # 환율 수집 (매일 09:00 KST)
+      fx-rates:
+        cron: "0 0 9 * * *"
+        enabled: true
+        
+      # 배당 이벤트 (매일 02:10 KST - 데모용 비활성)
+      dividends:
+        cron: "0 10 2 * * *"
+        enabled: false  # 데모는 시드 데이터 사용
+        
+  # 포트폴리오 분석 설정
+  analysis:
+    # 배당 계산 기본값
+    dividend:
+      default-withholding-rate: 0.15   # 미국 원천징수율
+      rolling-average-months: 3        # 3개월 롤링 평균
+      min-data-points: 2               # 최소 데이터 포인트
+      
+    # 리밸런싱 기본값 (커버드콜 ETF 특성 반영)
+    rebalancing:
+      default-max-weight: 0.35         # 단일 종목 최대 35% (변동성 고려)
+      min-shares-per-etf: 1            # ETF당 최소 1주
+      cash-reserve-percent: 0.1        # 10% 현금 보유 (변동성 대비)
+      
+    # 추천 시스템 (커버드콜 중심)
+    recommendation:
+      top-count: 4                     # 상위 4개 ETF 추천 (메인 티커 개수)
+      min-monthly-dividend: 100000     # 최소 월 배당 10만원 (고배당 전략)
+      diversification-bonus: 0.15      # 다양성 보너스 가중치 증가
+
+# =========================
+# 외부 서비스 설정
+# =========================
+# WebClient 설정
+webclient:
+  connect-timeout: 10000
+  read-timeout: 30000
+  write-timeout: 10000
+  max-in-memory-size: 1048576  # 1MB
+
+# 캐시 설정 (향후 Redis 연동 시)
+cache:
+  fx-rate-ttl: 3600           # 환율 캐시 1시간
+  quote-ttl: 120              # 시세 캐시 2분
+  dividend-stats-ttl: 1800    # 배당 통계 캐시 30분
+
+# =========================
+# 프로파일별 설정
+# =========================
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+logging:
+  level:
+    com.mondiv: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    com.mondiv.client: TRACE           # 개발 시 API 호출 상세 로그
+  file:
+    name: "./log/mondiv/mondiv-dev.log"
+  logback:
+    rollingpolicy:
+      file-name-pattern: "./log/mondiv/mondiv-dev-%d{yyyy-MM-dd}.%i.log.gz"
+    
+mondiv:
+  twelvedata:
+    rate-limit:
+      credits-per-minute: 8      # 개발 시에도 실제 한도 준수
+  scheduler:
+    collection:
+      main-quotes:
+        enabled: true
+      extended-quotes: 
+        enabled: false           # 개발 시 크레딧 절약
+      index-quotes:
+        enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+      
+logging:
+  level:
+    com.mondiv: INFO
+    org.springframework.web: WARN
+    com.mondiv.client.TwelveDataClient: INFO     # 운영 시 API 호출 요약 로그만
+    com.mondiv.service.DataCollectionService: INFO
+  file:
+    name: "./log/mondiv/mondiv-prod.log"
+  logback:
+    rollingpolicy:
+      file-name-pattern: "./log/mondiv/mondiv-prod-%d{yyyy-MM-dd}.%i.log.gz"
+      max-history: 90        # 운영은 90일 보관
+      total-size-cap: 10GB   # 운영은 10GB
+    
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: "./log/mondiv"
+      prefix: "access"
+      suffix: ".log"
+      pattern: "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\" %D"
+      
+mondiv:
+  scheduler:
+    collection:
+      main-quotes:
+        enabled: true
+      extended-quotes:
+        enabled: false  # 운영에서도 크레딧 절약
+      index-quotes:
+        enabled: false  # 운영에서도 EOD만 수집
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+      
+logging:
+  level:
+    com.mondiv: DEBUG
+    org.springframework.test: DEBUG
+  file:
+    name: "./log/mondiv/mondiv-test.log"
+  logback:
+    rollingpolicy:
+      file-name-pattern: "./log/mondiv/mondiv-test-%d{yyyy-MM-dd}.%i.log.gz"
+      max-history: 7         # 테스트는 7일만 보관
+      
+mondiv:
+  scheduler:
+    collection:
+      main-quotes:
+        enabled: false       # 테스트 시 스케줄러 비활성화
+      eod:
+        enabled: false
+      fx-rates:
+        enabled: false
