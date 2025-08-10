@@ -13,21 +13,34 @@ SET time_zone = '+00:00';
   - Twelve Data meta: symbol, exchange, mic_code, currency, exchange_timezone 등 매핑
 ========================================================= */
 CREATE TABLE IF NOT EXISTS instrument (
-                                          id               BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'PK',
-                                          ticker           VARCHAR(24)  NOT NULL COMMENT '예: AAPL, CONY',
-                                          name             VARCHAR(255) NOT NULL COMMENT '정식 명칭',
-                                          exchange         VARCHAR(64)  NOT NULL COMMENT '예: NASDAQ, NYSE Arca',
-                                          mic_code         VARCHAR(16)  NULL     COMMENT '예: XNAS',
-                                          currency         CHAR(3)      NOT NULL DEFAULT 'USD' COMMENT '시세/배당 통화',
-                                          exchange_tz      VARCHAR(64)  NULL     COMMENT '예: America/New_York',
-                                          type             ENUM('ETF','EQUITY','INDEX') NOT NULL DEFAULT 'EQUITY' COMMENT '자산 유형',
-                                          active           TINYINT(1)   NOT NULL DEFAULT 1,
-                                          created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                          updated_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                          id                 BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'PK',
+                                          ticker             VARCHAR(24)  NOT NULL COMMENT '예: AAPL, CONY',
+                                          name               VARCHAR(255) NOT NULL COMMENT '정식 명칭',
+                                          exchange           VARCHAR(64)  NOT NULL COMMENT '예: NASDAQ, NYSE Arca',
+                                          mic_code           VARCHAR(16)  NULL     COMMENT '예: XNAS',
+                                          currency           CHAR(3)      NOT NULL DEFAULT 'USD' COMMENT '시세/배당 통화',
+                                          exchange_tz        VARCHAR(64)  NULL     COMMENT '예: America/New_York',
+                                          type               ENUM('ETF','EQUITY','INDEX') NOT NULL DEFAULT 'EQUITY' COMMENT '자산 유형',
+
+    -- 배당 메타 보조 컬럼
+                                          div_supported      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '배당주/배당ETF 여부(표시 목적)',
+                                          div_frequency      ENUM('weekly','monthly','quarterly','irregular') NULL COMMENT '배당 주기(예상/표시용)',
+                                          last_div_ex_date   DATE         NULL COMMENT '최근 Ex-Date',
+                                          last_div_amount_usd DECIMAL(12,6) NULL COMMENT '최근 주당 배당금(USD)',
+
+                                          active             TINYINT(1)   NOT NULL DEFAULT 1,
+                                          created_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                          updated_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- 메타 동기화 정보
+                                          meta_provider      VARCHAR(32)  NOT NULL DEFAULT 'manual' COMMENT '메타 출처: manual/twelvedata 등',
+                                          meta_last_sync     TIMESTAMP    NULL COMMENT '메타 동기화 시각',
+
                                           UNIQUE KEY uk_instrument_ticker (ticker),
-                                          KEY ix_instrument_type_active (type, active)
+                                          KEY ix_instrument_type_active (type, active),
+                                          KEY ix_instrument_last_div_ex_date (last_div_ex_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    COMMENT='종목 메타: ticker↔id 매핑, 거래소/통화/타임존';
+    COMMENT='종목 메타: ticker↔id 매핑, 거래소/통화/타임존 + 배당 메타 보조 컬럼 포함';
 
 /* =========================================================
   1) 사용자 / 포트폴리오 / 포지션
