@@ -1,0 +1,105 @@
+# =========================
+# Mondiv - application.yml (RDS 직결 / Free Tier 최적화)
+# =========================
+spring:
+  application:
+    name: mondiv
+
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}             # RDS 엔드포인트
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    hikari:
+      pool-name: mondiv-hikari
+      maximum-pool-size: 8            # Free-tier/RDS 소형 인스턴스 가정(필요 시 조정)
+      minimum-idle: 2
+      connection-timeout: 30000       # 30s
+      validation-timeout: 5000
+      idle-timeout: 240000            # 4m (RDS wait_timeout 600s 이하)
+      max-lifetime: 300000            # 5m (wait_timeout 이하)
+      keepalive-time: 60000           # 60s
+      connection-test-query: "SELECT 1"
+
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: update              # 스키마는 수동 반영, 앱은 검증만
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect
+      hibernate.jdbc.time_zone: UTC
+
+  flyway:
+    enabled: false                    # 미사용
+
+  sql:
+    init:
+      mode: never                     # 운영 안전상 비활성
+
+  task:
+    scheduling:
+      pool:
+        size: 2
+      thread-name-prefix: mondiv-scheduler-
+
+server:
+  port: 9900
+  forward-headers-strategy: native
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,application/json,application/javascript,text/javascript
+    min-response-size: 1024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  simple:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.mondiv: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
+# =========================
+# Mondiv 도메인 설정 (Free Tier 한도 반영)
+# =========================
+mondiv:
+  display-time-zone: Asia/Seoul        # 화면 표시는 KST
+  tax:
+    us-withholding: 0.15               # 미국 원천징수 기본 가정
+  twelvedata:
+    base-url: https://api.twelvedata.com
+    api-key: ${TD_API_KEY}
+    rate-limit:
+      rest:
+        per-minute-credits: 8          # Basic 플랜
+        per-day-credits: 800
+      ws:
+        trial-credits: 8               # Trial 구독 한도(필요 시만 사용)
+    streaming:
+      ws-enabled: false                # 프리티어 기본은 REST 위주(WS 필요 시 true)
+  scheduler:
+    # 정규장(UTC) – KST 22:30~05:00 ≈ UTC 13:30~20:00
+    market-open-utc: "13:30"
+    market-close-utc: "20:00"
+    quotes-poll-interval: "PT2M"       # 2분 간격(0.5 rpm) → 4심볼 배치 기준 일일 ~780 credits
+    eod-load-cron: "0 10 6 * * *"      # 06:10 KST (EOD 적재)
+    dividends-load-cron: "0 10 2 * * *"# 02:10 KST (배당 이벤트 적재)
+    fx-load-cron: "0 0 9 * * *"        # 09:00 KST (USD/KRW)
