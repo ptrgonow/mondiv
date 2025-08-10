@@ -136,3 +136,30 @@ VALUES ('2025-08-08', 'USD', 'KRW', 1391.50, 'manual')
 ON DUPLICATE KEY UPDATE rate=VALUES(rate), source=VALUES(source);
 
 COMMIT;
+
+-- 최신 지급일(pay_date) 기준으로 instrument.last_div_ex_date / last_div_amount_usd 채우기
+-- 대상: ETF(CONY, MSTY, ULTY)
+UPDATE instrument i
+    JOIN (
+        /* instrument_id별 최신 지급일(pay_date) 레코드 추출 */
+        SELECT de.instrument_id,
+               de.pay_date,
+               de.ex_date,
+               de.amount_usd_per_share,
+               de.frequency
+        FROM dividend_event de
+                 JOIN (
+            SELECT instrument_id, MAX(pay_date) AS max_pay_date
+            FROM dividend_event
+            WHERE pay_date IS NOT NULL
+            GROUP BY instrument_id
+        ) x ON x.instrument_id = de.instrument_id AND x.max_pay_date = de.pay_date
+    ) t ON t.instrument_id = i.id
+SET i.last_div_ex_date    = t.ex_date,
+    i.last_div_amount_usd = t.amount_usd_per_share,
+    i.div_supported       = 1,
+    i.div_frequency       = COALESCE(t.frequency, i.div_frequency),
+    i.meta_provider       = 'manual',
+    i.meta_last_sync      = NOW()
+WHERE i.type = 'ETF'
+  AND i.ticker IN ('CONY','MSTY','ULTY');
