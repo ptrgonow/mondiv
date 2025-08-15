@@ -1,0 +1,15 @@
+# 공통
+**/.DS_Store
+**/.idea
+**/.vscode
+**/.gradle
+**/build
+**/out
+**/target
+**/node_modules
+**/dist
+
+# 로그/환경파일
+**/log
+**/*.log
+**/.env

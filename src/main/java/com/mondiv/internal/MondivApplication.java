@@ -1,4 +1,4 @@
-package com.mondiv.app;
+package com.mondiv.internal;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
