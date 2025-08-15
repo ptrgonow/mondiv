@@ -157,3 +157,4 @@ logs/
 *.gz
 
 .env
+*.txt
