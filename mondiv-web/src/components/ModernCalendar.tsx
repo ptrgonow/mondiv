@@ -14,7 +14,7 @@ import {
     startOfWeek,
     subMonths
 } from 'date-fns'
-import {ko} from "/Users/patrick/Desktop/mondiv-web/node_modules/date-fns/locale/ko"
+import {ko} from "/Users/patrick/Desktop/mondiv/mondiv-web/node_modules/date-fns/locale/ko"
 import {useMemo, useState} from 'react'
 import type {DividendEvent} from '@/types/ticker'
 
