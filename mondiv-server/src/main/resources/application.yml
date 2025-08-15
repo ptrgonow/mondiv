@@ -12,9 +12,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/mondiv?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${DB_USER:mondiv}
-    password: ${DB_PASS:mondiv_pw}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
     hikari:
       pool-name: mondiv-hikari
       maximum-pool-size: 10
@@ -45,7 +45,6 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
-      hibernate.dialect: org.hibernate.dialect.MySQLDialect
       hibernate.jdbc.time_zone: UTC
       hibernate.connection.provider_disables_autocommit: true
       hibernate.cache.use_second_level_cache: false
@@ -122,27 +121,27 @@ management:
 # =========================
 # 로깅 설정 (프로젝트 루트/log 적재)
 # =========================
-logging:
-  level:
-    root: INFO
-    com.mondiv: INFO
-    org.hibernate.SQL: OFF
-    org.hibernate.orm.jdbc.bind: OFF
-    org.springframework.scheduling: INFO
-    org.springframework.web: INFO
-    com.mondiv.client.TwelveDataClient: DEBUG
-    com.mondiv.service.DataCollectionService: DEBUG
-    com.mondiv.service.TwelveDataRateLimiter: INFO
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
-  file:
-    name: "./log/mondiv.log"
-  logback:
-    rollingpolicy:
-      file-name-pattern: "./log/mondiv-%d{yyyy-MM-dd}.%i.log.gz"
-      max-file-size: 100MB
-      max-history: 30
-      total-size-cap: 3GB
-      clean-history-on-start: false
+#logging:
+#  level:
+#    root: INFO
+#    com.mondiv: INFO
+#    org.hibernate.SQL: OFF
+#    org.hibernate.orm.jdbc.bind: OFF
+#    org.springframework.scheduling: INFO
+#    org.springframework.web: INFO
+#    com.mondiv.client.TwelveDataClient: DEBUG
+#    com.mondiv.service.DataCollectionService: DEBUG
+#    com.mondiv.service.TwelveDataRateLimiter: INFO
+#  pattern:
+#    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+#    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+#  file:
+#    name: "./log/mondiv.log"
+#  logback:
+#    rollingpolicy:
+#      file-name-pattern: "./log/mondiv-%d{yyyy-MM-dd}.%i.log.gz"
+#      max-file-size: 100MB
+#      max-history: 30
+#      total-size-cap: 3GB
+#      clean-history-on-start: false
 
