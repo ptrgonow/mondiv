@@ -1,0 +1,26 @@
+/* src/styles/marquee.css */
+@keyframes marquee-x {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+    /* 컨텐츠를 2회 복제하므로 -50%면 무한 루프 */
+}
+
+.tape-viewport {
+    overflow: hidden;
+    mask-image: linear-gradient(to right, transparent 0, black 32px, black calc(100% - 32px), transparent 100%);
+}
+
+.tape-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-x linear infinite;
+    animation-duration: 28s; /* 길이에 따라 조정 가능 */
+}
+
+.tape-track:hover {
+    animation-play-state: paused;
+}

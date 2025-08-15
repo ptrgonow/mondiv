@@ -1,0 +1,119 @@
+/* src/index.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+    :root {
+        --bg: #ffffff;
+        --fg: #111827;
+
+        /* === brand (light) === */
+        --brand-700: #0f766e; /* teal-700 */
+        --brand-600: #0d9488; /* teal-600 */
+        --brand-500: #14b8a6; /* teal-500 */
+        --brand-500-a10: rgba(20, 184, 166, .10);
+
+        /* === chart tokens (light) === */
+        --chart-axis: #6b7280;
+        --chart-grid: rgba(107, 114, 128, .35);
+        --chart-line: var(--brand-600);
+        --chart-area-from: rgba(20, 184, 166, .25);
+        --chart-area-to: rgba(20, 184, 166, 0);
+
+        --tooltip-bg: rgba(255, 255, 255, .92);
+        --tooltip-text: #111827;
+        --tooltip-border: rgba(0, 0, 0, .15);
+    }
+
+    .dark {
+        --bg: #0a0a0a;
+        --fg: #f5f5f5;
+
+        /* === brand (dark) === */
+        --brand-700: #5eead4; /* teal-300 (텍스트) */
+        --brand-600: #2dd4bf; /* teal-400 (라인) */
+        --brand-500: #14b8a6; /* teal-500 */
+        --brand-500-a10: rgba(45, 212, 191, .12);
+
+        /* === chart tokens (dark) === */
+        --chart-axis: #a3a3a3;
+        --chart-grid: rgba(163, 163, 163, .25);
+        --chart-line: var(--brand-600);
+        --chart-area-from: rgba(45, 212, 191, .20);
+        --chart-area-to: rgba(45, 212, 191, 0);
+
+        --tooltip-bg: rgba(23, 23, 23, .92);
+        --tooltip-text: #f5f5f5;
+        --tooltip-border: rgba(255, 255, 255, .15);
+    }
+
+    html, body, #root {
+        height: 100%;
+    }
+
+    /* 기본 폰트 설정 */
+    html {
+        font-size: 16px;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+
+    body {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    /* 기본 폰트 색상 */
+    body {
+        color: var(--fg);
+    }
+
+    /* 기본 배경색 */
+    body {
+        background-color: var(--bg);
+    }
+
+    /* 기본 링크 스타일 */
+    a {
+        color: var(--brand-500);
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: var(--brand-600);
+        text-decoration: none;
+    }
+
+    /* 기본 박스 모델 설정 */
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    /* 기본 마진과 패딩 제거 */
+    body, h1, h2, h3, p, ul, ol, li {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* 기본 리스트 스타일 제거 */
+    ul, ol {
+        list-style: none;
+    }
+
+
+    /* 스크롤바 숨김 */
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+}
