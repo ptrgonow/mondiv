@@ -1,0 +1,148 @@
+# =========================
+# Mondiv - application.yml (데모 최적화 + 정적 서빙)
+# =========================
+spring:
+  application:
+    name: mondiv
+
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/mondiv?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USER:mondiv}
+    password: ${DB_PASS:mondiv_pw}
+    hikari:
+      pool-name: mondiv-hikari
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 240000
+      max-lifetime: 300000
+      keepalive-time: 60000
+      connection-test-query: "SELECT 1"
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        useLocalSessionState: true
+        rewriteBatchedStatements: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        elideSetAutoCommits: true
+        maintainTimeStats: false
+
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect
+      hibernate.jdbc.time_zone: UTC
+      hibernate.connection.provider_disables_autocommit: true
+      hibernate.cache.use_second_level_cache: false
+      hibernate.cache.use_query_cache: false
+      hibernate.generate_statistics: false
+      hibernate.jdbc.batch_size: 25
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+      hibernate.jdbc.batch_versioned_data: true
+
+  flyway:
+    enabled: false
+
+  sql:
+    init:
+      mode: never
+
+  task:
+    scheduling:
+      pool:
+        size: 4
+      thread-name-prefix: mondiv-scheduler-
+
+  # -------------------------
+  # [정적 서빙 핵심 설정]
+  #   - Vite 빌드 산출물(dist)을 컨테이너의 /app/public 으로 복사
+  #   - 서버가 / 및 /assets/* 등 정적 파일을 서빙
+  # -------------------------
+  web:
+    resources:
+      static-locations: "classpath:/static/,file:/app/public/"
+      add-mappings: true
+      cache:
+        cachecontrol:
+          max-age: 3600
+          cache-public: true
+      chain:
+        enabled: true
+        # content 전략은 해시 파일명(Vite 기본)과 중복되지만 켜둬도 무방
+        strategy:
+          content:
+            enabled: true
+            paths: /**
+
+server:
+  port: ${SERVER_PORT:9900}
+  forward-headers-strategy: native
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,application/json,application/javascript,text/javascript
+    min-response-size: 1024
+  servlet:
+    context-path: /
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,scheduledtasks
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  simple:
+    metrics:
+      export:
+        enabled: true
+
+# =========================
+# 로깅 설정 (프로젝트 루트/log 적재)
+# =========================
+logging:
+  level:
+    root: INFO
+    com.mondiv: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.springframework.scheduling: INFO
+    org.springframework.web: INFO
+    com.mondiv.client.TwelveDataClient: DEBUG
+    com.mondiv.service.DataCollectionService: DEBUG
+    com.mondiv.service.TwelveDataRateLimiter: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: "./log/mondiv.log"
+  logback:
+    rollingpolicy:
+      file-name-pattern: "./log/mondiv-%d{yyyy-MM-dd}.%i.log.gz"
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB
+      clean-history-on-start: false
+
