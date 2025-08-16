@@ -74,7 +74,7 @@ export default function DashboardPage() {
                                     })
                                     return (
                                         <div className="mb-1 px-1 font-semibold">
-                                            {selected.info.symbol} — {nf.format(lastAmt)} (최근)
+                                            {selected.info.symbol} — {nf.format(lastAmt)}
                                         </div>
                                     )
                                 })()}

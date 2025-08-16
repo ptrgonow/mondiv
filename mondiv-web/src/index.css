@@ -105,7 +105,6 @@
         list-style: none;
     }
 
-
     /* 스크롤바 숨김 */
     .no-scrollbar {
         -ms-overflow-style: none;
@@ -116,4 +115,51 @@
         width: 0;
         height: 0;
     }
+
+}
+@layer components {
+
+    /* 공통 변수 (라이트/다크에서 투명도만 다르게) */
+    .liquid-vars {
+        --liquid-alpha: .2;
+        --liquid-blur: 1px;
+        --halo-alpha: .02;
+    }
+    .dark .liquid-vars {
+        --liquid-alpha: .015;
+        --liquid-blur: 2px;
+        --halo-alpha: .015;
+    }
+
+    .liquid-tray {
+        position: relative;
+        border-radius: 18px;
+        /* 중앙은 거의 투명, blur는 유지 */
+        background: rgba(255 255 255 / var(--liquid-alpha));
+        -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(120%) contrast(105%);
+        backdrop-filter: blur(var(--liquid-blur)) saturate(120%) contrast(105%);
+        border: 1px solid rgba(255 255 255 / .18);
+        box-shadow:
+                0 10px 22px rgba(2 6 23 / .05),      /* 바닥 그림자 */
+                inset 0 1px 0 rgba(255 255 255 / .25); /* 윗면 하이라이트 */
+    }
+
+    /* 표면 하이라이트를 '가장자리만' 살짝 – 중앙은 투명 */
+    .liquid-tray::before{
+        content:"";
+        position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+        /* 가장자리만 밝아지는 그라디언트 */
+        background:
+                radial-gradient(120% 140% at 50% -10%, rgba(255,255,255,.35) 0%, transparent 60%)
+                ,linear-gradient(180deg, rgba(255,255,255,.12), transparent);
+        /* 중앙 투명, 테두리만 남도록 마스크 */
+        -webkit-mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+        mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        padding: 1px; /* rim 굵기 */
+    }
+
+    /* 컬러 halo(필요 없으면 opacity 0) */
+    .liquid-halo{ opacity: var(--halo-alpha); }
 }
