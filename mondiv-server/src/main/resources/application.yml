@@ -2,6 +2,10 @@
 # Mondiv - application.yml (데모 최적화 + 정적 서빙)
 # =========================
 spring:
+  config:
+    import:
+      - classpath:/api-config.yml
+
   application:
     name: mondiv
 

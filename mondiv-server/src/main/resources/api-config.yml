@@ -1,0 +1,31 @@
+
+# twelve-data API configuration
+
+twelve-data:
+    baseUrl: "https://api.twelvedata.com/v1"
+    apiKey: "${TD_API_KEY}"
+    endpoints:
+
+        etfs:
+            symbol: "/symbol_search"
+            eod: "/eod"
+
+        stocks:
+            list: "/stocks"
+            quote: "/quote"
+            historical: "/time_series"
+            technicalIndicators: "/technical_indicator"
+
+        news:
+            latest: "/news/latest"
+            search: "/news/search"
+
+
+bavest:
+    baseUrl: "https://api.bavest.co/v0"
+    apiKey: "${BV_API_KEY}"
+    endpoints:
+      forex:
+            quote: "/fx/quote"
+      logo:
+        img: "/logo"

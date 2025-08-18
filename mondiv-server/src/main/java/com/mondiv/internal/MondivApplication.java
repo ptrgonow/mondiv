@@ -3,8 +3,10 @@ package com.mondiv.internal;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.mondiv")
+@ConfigurationPropertiesScan(basePackages = "com.mondiv")
 public class MondivApplication {
     
     static {
@@ -19,6 +21,7 @@ public class MondivApplication {
     }
     
     public static void main(String[] args) {
+        Thread.currentThread().setName("Mondiv-Main");
         SpringApplication.run(MondivApplication.class, args);
     }
     
